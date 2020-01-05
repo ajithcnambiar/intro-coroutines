@@ -11,6 +11,29 @@ suspend fun loadContributorsChannels(
     updateResults: suspend (List<User>, completed: Boolean) -> Unit
 ) {
     coroutineScope {
-        TODO()
+        val repos = service
+            .getOrgRepos(req.org)
+            .also { logRepos(req, it) }
+            .body() ?: listOf()
+
+        var allUsers = emptyList<User>()
+        val channel = Channel<List<User>>()
+        repos.map {repo ->
+            launch {
+                val users = service
+                    .getRepoContributors(req.org, repo.name)
+                    .also { logUsers(repo, it) }
+                    .bodyList()
+                channel.send(users)
+            }
+        }
+
+        launch {
+            repeat(repos.size){
+                val users = channel.receive()
+                allUsers = (allUsers + users).aggregate()
+                updateResults(allUsers, channel.isEmpty)
+            }
+        }
     }
 }

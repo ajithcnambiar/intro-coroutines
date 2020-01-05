@@ -14,5 +14,9 @@ TODO: Write aggregation code.
  The corresponding test can be found in test/tasks/AggregationKtTest.kt.
  You can use 'Navigate | Test' menu action (note the shortcut) to navigate to the test.
 */
-fun List<User>.aggregate(): List<User> =
-    this
+fun List<User>.aggregate(): List<User> {
+    return this.groupingBy { it.login }
+        .foldTo(mutableMapOf(), emptyList<User>()){acc,e -> acc + e}
+        .flatMap{ mutableListOf(User(it.key, it.value.fold(0){acc, e -> acc + e.contributions}))}
+        .sortedByDescending { it.contributions }
+}
